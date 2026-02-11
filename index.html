@@ -14,20 +14,20 @@
         .container { max-width: 1100px; margin: auto; }
         
         .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid var(--orange); padding-bottom: 20px; }
-        .header h1 { color: var(--white); margin: 0; font-size: 2.5em; }
+        .header h1 { color: var(--white); margin: 0; font-size: 2.5em; text-transform: uppercase; letter-spacing: 2px;}
         .header h1 span { color: var(--orange); }
 
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; }
         .card { background: var(--card); border: 1px solid #333; padding: 25px; border-radius: 12px; transition: 0.3s; }
-        .card:hover { border-color: var(--orange); }
+        .card:hover { border-color: var(--orange); box-shadow: 0 0 15px rgba(255, 102, 0, 0.1); }
         .card h3 { color: var(--orange); border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; display: flex; align-items: center; gap: 10px; }
 
         label { font-size: 11px; color: var(--orange); text-transform: uppercase; font-weight: bold; display: block; margin-top: 15px; }
-        input { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 6px; box-sizing: border-box; margin-top: 5px; }
-        input:focus { border-color: var(--orange); outline: none; }
+        input { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 6px; box-sizing: border-box; margin-top: 5px; font-size: 14px;}
+        input:focus { border-color: var(--orange); outline: none; background: #2a2a2a; }
 
         .btn { background: var(--orange); color: #fff; border: none; padding: 15px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 20px; text-transform: uppercase; transition: 0.2s; }
-        .btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
+        .btn:hover { filter: brightness(1.2); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 102, 0, 0.3); }
         
         .status-msg { font-size: 11px; color: #00ff00; margin-top: 5px; display: none; }
         .history-panel { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 20px; margin-top: 30px; display: none; }
@@ -37,7 +37,7 @@
         th { text-align: left; background: #222; color: var(--orange); padding: 12px; font-size: 12px; text-transform: uppercase; }
         td { padding: 12px; border-bottom: 1px solid #333; color: #ccc; font-size: 13px; }
         
-        .btn-sm { padding: 6px 12px; font-size: 11px; border-radius: 4px; text-decoration: none; display: inline-block; font-weight: bold; }
+        .btn-sm { padding: 6px 12px; font-size: 11px; border-radius: 4px; text-decoration: none; display: inline-block; font-weight: bold; cursor: pointer; border: none;}
         .btn-green { background: #28a745; color: white; }
         .btn-blue { background: #007bff; color: white; }
 
@@ -49,26 +49,26 @@
 <div class="container">
     <header class="header">
         <h1>DIMOB <span>SYSTEM</span></h1>
-        <p style="color: #aaa">Gerador R04 | Preservação de Dados e Conversão Inteligente</p>
+        <p style="color: #888">Gerador de Arquivos Magnéticos | Layout R04 Atualizado</p>
     </header>
 
     <div class="grid">
         <div class="card">
-            <h3><i class="fas fa-file-excel"></i> 1. Preparação</h3>
-            <p style="font-size: 13px; color: #888;">Utilize nosso modelo para garantir que CPFs e CNPJs não sofram alterações de formato.</p>
+            <h3><i class="fas fa-file-excel"></i> 1. Planilha</h3>
+            <p style="font-size: 13px; color: #888;">Gere o modelo base para preencher os dados dos compradores e vendedores corretamente.</p>
             <button onclick="baixarModelo()" class="btn" style="background: #333; border: 1px solid #444;">Download Modelo</button>
         </div>
 
         <div class="card">
             <h3><i class="fas fa-building"></i> 2. Declarante</h3>
-            <label>CNPJ da Empresa</label>
-            <input type="text" id="cnpj_decl" onblur="buscarCNPJ(this.value)" placeholder="Digite e saia do campo para buscar">
-            <div id="loading" class="status-msg"><i class="fas fa-sync fa-spin"></i> Consultando Receita Federal...</div>
+            <label>CNPJ do Declarante</label>
+            <input type="text" id="cnpj_decl" onblur="buscarCNPJ(this.value)" placeholder="Apenas números">
+            <div id="loading" class="status-msg"><i class="fas fa-sync fa-spin"></i> Sincronizando dados cadastrais...</div>
             
             <label>Razão Social</label>
             <input type="text" id="nome_decl">
             
-            <label>Endereço</label>
+            <label>Endereço Completo</label>
             <input type="text" id="end_decl">
             
             <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px">
@@ -77,26 +77,26 @@
             </div>
             <input type="hidden" id="mun_codigo">
 
-            <label>CPF do Responsável</label>
+            <label>CPF do Responsável (Obrigatório)</label>
             <input type="text" id="cpf_resp" placeholder="Apenas números">
         </div>
 
         <div class="card">
-            <h3><i class="fas fa-cog"></i> 3. Processar</h3>
-            <label>Selecionar Planilha Preenchida</label>
+            <h3><i class="fas fa-cog"></i> 3. Converter</h3>
+            <label>Upload da Planilha Excel</label>
             <input type="file" id="arquivo_input" accept=".xlsx">
-            <button onclick="processarDIMOB()" class="btn">Converter p/ TXT</button>
+            <button onclick="gerarDIMOB()" class="btn">Gerar Arquivo .TXT</button>
         </div>
     </div>
 
     <div id="painelHistorico" class="history-panel">
-        <h3><i class="fas fa-history"></i> Arquivos Gerados nesta Sessão</h3>
+        <h3><i class="fas fa-history"></i> Histórico de Exportação</h3>
         <table>
             <thead>
                 <tr>
-                    <th>Empresa / Data</th>
+                    <th>Empresa / Emissão</th>
                     <th>CNPJ</th>
-                    <th>Ações</th>
+                    <th>Arquivos</th>
                 </tr>
             </thead>
             <tbody id="tabelaHistorico"></tbody>
@@ -107,13 +107,11 @@
 <script src="baseMunicipios.js"></script>
 
 <script>
-// --- MOTOR DE LIMPEZA (Blindagem contra Notação Científica) ---
+// --- FUNÇÕES DE TRATAMENTO DE DADOS ---
 const limpar = (v) => {
     if (!v) return "";
     let s = v.toString().trim();
-    if (s.toUpperCase().includes('E+')) {
-        s = Number(s).toLocaleString('fullwide', {useGrouping:false});
-    }
+    if (s.toUpperCase().includes('E+')) s = Number(s).toLocaleString('fullwide', {useGrouping:false});
     return s.replace(/\D/g, "");
 };
 
@@ -136,7 +134,7 @@ const fData = (v) => {
     return v.toString().replace(/\D/g, "").padStart(8, "0").substring(0, 8);
 };
 
-// --- BUSCA CNPJ RESTAURADA ---
+// --- BUSCA CNPJ AUTOMATIZADA ---
 async function buscarCNPJ(cnpj) {
     const doc = limpar(cnpj);
     if (doc.length !== 14) return;
@@ -153,48 +151,44 @@ async function buscarCNPJ(cnpj) {
             document.getElementById('mun_nome').value = est.cidade.nome;
             document.getElementById('uf_decl').value = est.estado.sigla;
             
-            // Tenta achar código RFB se a baseMunicipios estiver carregada
+            // Atribuição do Código RFB se baseMunicipios estiver presente
             if (typeof MUNICIPIOS_RFB !== 'undefined') {
-                const cidadeNorm = est.cidade.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-                document.getElementById('mun_codigo').value = MUNICIPIOS_RFB[cidadeNorm] || "0000";
+                const cidNorm = est.cidade.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+                document.getElementById('mun_codigo').value = MUNICIPIOS_RFB[cidNorm] || "0000";
             }
         }
     } catch (err) {
-        console.error("Erro ao buscar CNPJ:", err);
+        console.error("Falha na sincronização cadastral:", err);
     } finally {
         document.getElementById('loading').style.display = 'none';
     }
 }
 
-// --- PROCESSAMENTO FINAL ---
-function processarDIMOB() {
+// --- GERAÇÃO DO ARQUIVO TXT ---
+function gerarDIMOB() {
     const cnpj = document.getElementById('cnpj_decl').value;
     const nome = document.getElementById('nome_decl').value;
     const end = document.getElementById('end_decl').value;
     const uf = document.getElementById('uf_decl').value;
     const cpfR = document.getElementById('cpf_resp').value;
-    const munC = document.getElementById('mun_codigo').value;
-    const input = document.getElementById('arquivo_input');
+    const munC = document.getElementById('mun_codigo').value || "0000";
+    const file = document.getElementById('arquivo_input').files[0];
 
-    if (!input.files[0] || !cnpj || !cpfR) {
-        alert("Campos obrigatórios: CNPJ, CPF Responsável e Planilha.");
-        return;
-    }
+    if (!file || !cnpj || !cpfR) return alert("Erro: CNPJ, CPF Responsável e Planilha são obrigatórios.");
 
     const reader = new FileReader();
     reader.onload = (e) => {
         const data = new Uint8Array(e.target.result);
         const wb = XLSX.read(data, {type: 'array', raw: false});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws);
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
         let txt = "DIMOB" + "".padEnd(369, " ") + "\r\n";
         
-        // R01
+        // Registro R01 (Dados do Declarante vindos dos inputs)
         txt += "R01" + fN(cnpj, 14) + "20250000000000000000000000" 
             + fX(nome, 60) + fN(cpfR, 11) + fX(end, 120) + fX(uf, 2) + fN(munC, 4) + "".padEnd(30, " ") + "\r\n";
 
-        // R04
+        // Registro R04 (Contratos da Planilha)
         rows.forEach((r, idx) => {
             if (!r.CPF_CNPJ_COMPRADOR) return;
             let l = "R04";
@@ -210,27 +204,26 @@ function processarDIMOB() {
 
         txt += "T9" + "".padEnd(100, " ") + "\r\n";
 
-        const blob = new Blob([txt], {type: 'text/plain'});
-        const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-        const nomeArquivo = `DIMOB_${nome.substring(0,15)}_${dataAtual}.txt`;
+        const hoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+        const nomeFinal = `DIMOB_${nome.substring(0,10).trim()}_${hoje}.txt`;
         
+        const blob = new Blob([txt], {type: 'text/plain'});
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = nomeArquivo;
+        link.download = nomeFinal;
         link.click();
 
-        addHistorico(nome, cnpj, dataAtual, blob, input.files[0]);
+        addHistorico(nome, cnpj, hoje, blob, file);
     };
-    reader.readAsArrayBuffer(input.files[0]);
+    reader.readAsArrayBuffer(file);
 }
 
-function addHistorico(empresa, cnpj, data, blob, file) {
+function addHistorico(empresa, cnpj, data, blob, excel) {
     const table = document.getElementById('tabelaHistorico');
     const row = table.insertRow(0);
-    const urlTxt = URL.createObjectURL(blob);
-    const urlEx = URL.createObjectURL(file);
-    row.innerHTML = `<td>${empresa}<br><small>${data}</small></td><td>${fN(cnpj, 14)}</td>
-        <td><a href="${urlTxt}" download class="btn-sm btn-blue">TXT</a> <a href="${urlEx}" download class="btn-sm btn-green">XLSX</a></td>`;
+    row.innerHTML = `<td><strong>${empresa}</strong><br><small>${data}</small></td><td>${fN(cnpj, 14)}</td>
+        <td><a href="${URL.createObjectURL(blob)}" download class="btn-sm btn-blue">TXT</a> 
+            <a href="${URL.createObjectURL(excel)}" download class="btn-sm btn-green">XLSX</a></td>`;
     document.getElementById('painelHistorico').classList.add('active');
 }
 
@@ -238,7 +231,7 @@ function baixarModelo() {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([["SEQUENCIAL", "CPF_CNPJ_COMPRADOR", "NOME_COMPRADOR", "CPF_CNPJ_VENDEDOR", "NOME_VENDEDOR", "CONTRATO", "DATA_DDMMAAAA", "VALOR_VENDA", "VALOR_COMISSAO", "TIPO_URBANO_RURAL", "ENDERECO", "CEP", "MUNICIPIO_NOME", "UF"]]);
     XLSX.utils.book_append_sheet(wb, ws, "DADOS");
-    XLSX.writeFile(wb, "Modelo_DIMOB.xlsx");
+    XLSX.writeFile(wb, "Modelo_DIMOB_Vendas.xlsx");
 }
 </script>
 </body>
