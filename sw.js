@@ -1,7 +1,4 @@
-// sw.js - Service Worker para Controle de Versão e Cache
-
-// MUDE AQUI SEMPRE QUE ATUALIZAR O CÓDIGO (Ex: v1 -> v2 -> v3)
-const CACHE_NAME = 'dimob-pro-v1';
+const CACHE_NAME = 'dimob-pro-v2';
 
 // Arquivos que serão salvos no computador do usuário
 const urlsToCache = [
