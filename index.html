@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DIMOB Pro | Conversor Digital 2025</title>
+    <title>DIMOB Pro | Conversor Oficial 2025</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -24,13 +24,13 @@
 <div class="container">
     <header style="text-align: center; margin-bottom: 40px;">
         <h1>DIMOB <span style="color:white">SYSTEM</span></h1>
-        <p style="color: var(--orange)">Geração de Arquivo Magnético - Layout Oficial RFB</p>
+        <p style="color: var(--orange)">Geração de Arquivo Magnético - Padrão RFB</p>
     </header>
 
     <div class="grid">
         <div class="card">
             <h3><i class="fas fa-file-excel"></i> 1. Preparação</h3>
-            <p style="color:#888; font-size:13px; margin-bottom:15px">Baixe a planilha base e preencha os dados das vendas.</p>
+            <p style="color:#aaa; font-size:12px">Baixe o modelo e preencha. Valores podem ser digitados normalmente (ex: 250000).</p>
             <button onclick="baixarModelo()" class="btn" style="background: #333;">Baixar Modelo XLSX</button>
         </div>
 
@@ -38,25 +38,33 @@
             <h3><i class="fas fa-search"></i> 2. Declarante</h3>
             <label>CNPJ da Imobiliária</label>
             <input type="text" id="cnpj_decl" onblur="consultarEmpresa(this.value)" placeholder="00.000.000/0001-00">
-            <div id="loading" class="status-msg">Buscando dados na Receita Federal...</div>
+            <div id="loading" class="status-msg">Consultando Receita Federal...</div>
             
-            <label>Nome Empresarial (Razão Social)</label>
+            <label>Razão Social</label>
             <input type="text" id="nome_decl">
             
-            <label>Endereço Completo (Obrigatório para R01)</label>
-            <input type="text" id="end_decl" placeholder="Será preenchido automaticamente...">
+            <label>Endereço Completo (Obrigatório)</label>
+            <input type="text" id="end_decl" placeholder="Carregado automaticamente...">
             
-            <label>Município (Nome)</label>
-            <input type="text" id="mun_decl_nome" readonly>
-            <input type="hidden" id="mun_decl_codigo">
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label>Município</label>
+                    <input type="text" id="mun_decl_nome" readonly>
+                    <input type="hidden" id="mun_decl_codigo">
+                </div>
+                <div style="width: 60px;">
+                    <label>UF</label>
+                    <input type="text" id="uf_decl" readonly>
+                </div>
+            </div>
             
-            <label>CPF do Responsável perante a RFB</label>
-            <input type="text" id="cpf_resp" placeholder="000.000.000-00">
+            <label>CPF do Responsável (RFB)</label>
+            <input type="text" id="cpf_resp" placeholder="000.000.000-00 (Obrigatório)">
         </div>
 
         <div class="card">
             <h3><i class="fas fa-sync"></i> 3. Gerar TXT</h3>
-            <p style="color:#888; font-size:13px; margin-bottom:15px">Selecione o arquivo preenchido para converter.</p>
+            <p style="color:#aaa; font-size:12px">O sistema corrigirá automaticamente os centavos.</p>
             <input type="file" id="arquivo_input" accept=".xlsx">
             <button onclick="gerarTxtFinal()" class="btn">CONVERTER E BAIXAR TXT</button>
         </div>
@@ -66,15 +74,41 @@
 <script src="baseMunicipios.js"></script>
 
 <script>
-// Funções de formatação conforme Manual DIMOB
+// --- FUNÇÕES DE FORMATAÇÃO ---
+
+// Formata Números (apenas dígitos)
 const fN = (v, t) => (v || "0").toString().replace(/\D/g, "").padStart(t, "0").substring(0, t);
+
+// Formata Texto (remove acentos, caixa alta, completa com espaços)
 const fX = (v, t) => (v || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().padEnd(t, " ").substring(0, t);
+
+// Formata Valores Monetários (Converte Excel em formato R$ sem vírgula)
+// Ex: 500000 -> 500000.00 -> 50000000 (Garante os centavos)
+const fV = (v, t) => {
+    let valor = parseFloat(v || 0);
+    // Fixa em 2 casas decimais e remove o ponto
+    let stringValor = valor.toFixed(2).replace(".", "").replace(",", "");
+    return stringValor.padStart(t, "0").substring(0, t);
+};
+
+// Formata CPF (11 posições) vs CNPJ (14 posições)
+// Manual: CNPJ preenche tudo. CPF alinha à esquerda e deixa espaço à direita.
+const fDoc = (v) => {
+    let limpo = (v || "").toString().replace(/\D/g, "");
+    if (limpo.length > 11) {
+        // É CNPJ (14 digitos)
+        return limpo.padStart(14, "0").substring(0, 14);
+    } else {
+        // É CPF (11 digitos + 3 espaços)
+        return limpo.padStart(11, "0").padEnd(14, " ");
+    }
+};
 
 function normalizarCidade(texto) {
     return texto ? texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim() : "";
 }
 
-// Consulta CNPJ e preenche os campos, INCLUINDO O ENDEREÇO
+// --- LÓGICA DE CONSULTA ---
 async function consultarEmpresa(cnpj) {
     const limpo = cnpj.replace(/\D/g, "");
     if (limpo.length !== 14) return;
@@ -86,41 +120,42 @@ async function consultarEmpresa(cnpj) {
         
         if (data.razao_social) {
             document.getElementById('nome_decl').value = data.razao_social;
-            
             const est = data.estabelecimento;
-            // AQUI ESTÁ A MÁGICA: Monta o endereço e joga no campo VISÍVEL "end_decl"
             const enderecoMontado = `${est.tipo_logradouro} ${est.logradouro}, ${est.numero} ${est.complemento || ""} - ${est.bairro}`.trim();
             document.getElementById('end_decl').value = enderecoMontado;
             
             const cidadeNome = est.cidade.nome;
+            const uf = est.estado.sigla;
             document.getElementById('mun_decl_nome').value = cidadeNome;
+            document.getElementById('uf_decl').value = uf;
             
-            // Busca o código RFB na baseMunicipios.js
             const cidadeNormalizada = normalizarCidade(cidadeNome);
             const codigoRFB = MUNICIPIOS_RFB[cidadeNormalizada] || "";
             document.getElementById('mun_decl_codigo').value = codigoRFB;
             
-            if (!codigoRFB) alert("Atenção: Código RFB do município não encontrado na base de dados.");
+            if (!codigoRFB) alert("Atenção: Município localizado, mas o código RFB não está na base interna.");
         }
     } catch (e) {
-        alert("Erro ao consultar CNPJ. Preencha os dados manualmente.");
+        alert("Não foi possível consultar automaticamente. Preencha manualmente.");
     } finally {
         document.getElementById('loading').style.display = 'none';
     }
 }
 
+// --- GERAÇÃO DO ARQUIVO ---
 function gerarTxtFinal() {
-    // AGORA ELE LÊ O ENDEREÇO QUE ESTÁ NA TELA
     const cnpj = document.getElementById('cnpj_decl').value;
     const nome = document.getElementById('nome_decl').value;
-    const endereco = document.getElementById('end_decl').value; 
+    const endereco = document.getElementById('end_decl').value;
+    const uf = document.getElementById('uf_decl').value;
     const cpfR = document.getElementById('cpf_resp').value;
     const munCod = document.getElementById('mun_decl_codigo').value;
     const file = document.getElementById('arquivo_input').files[0];
 
-    if (!file || !cnpj || !endereco || !cpfR) {
-        return alert("Por favor, preencha todos os campos do Declarante (incluindo Endereço e CPF) e selecione o arquivo.");
-    }
+    // Validação de segurança
+    if (!file) return alert("Selecione o arquivo XLSX.");
+    if (!cnpj) return alert("Preencha o CNPJ.");
+    if (!cpfR || cpfR.length < 5) return alert("ERRO: O CPF do Responsável é obrigatório!");
 
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -128,26 +163,31 @@ function gerarTxtFinal() {
         const wb = XLSX.read(data, {type: 'array', raw: true});
         const planilha = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-        let txt = "DIMOB" + "".padEnd(369, " ") + "\r\n";
+        let txt = "DIMOB" + "".padEnd(369, " ") + "\r\n"; // Header
 
-        // REGISTRO R01 CORRIGIDO:
-        // Agora ele insere a variável 'endereco' que pegamos da tela na posição correta (após o CPF)
+        // R01 - DADOS DO DECLARANTE
         txt += "R01" + fN(cnpj, 14) + "2025" + "0" + "".padEnd(10, "0") + "0" + "00000000" + "00" 
-            + fX(nome, 60) + fN(cpfR, 11) + fX(endereco, 120) + "SP" + fN(munCod, 4) + "".padEnd(30, " ") + "\r\n";
+            + fX(nome, 60) + fN(cpfR, 11) + fX(endereco, 120) + fX(uf, 2) + fN(munCod, 4) + "".padEnd(30, " ") + "\r\n";
 
-        // R04 - Vendas
+        // R04 - VENDAS
         planilha.forEach((r, i) => {
             const codMunL = MUNICIPIOS_RFB[normalizarCidade(r.MUNICIPIO_NOME)] || "0000";
+            
             txt += "R04" + fN(cnpj, 14) + "2025" + fN(i+1, 7)
-                + fN(r.CPF_CNPJ_COMPRADOR, 14) + fX(r.NOME_COMPRADOR, 60)
-                + fN(r.CPF_CNPJ_VENDEDOR, 14) + fX(r.NOME_VENDEDOR, 60)
-                + fX(r.CONTRATO, 6) + fN(r.DATA_DDMMAAAA, 8)
-                + fN(r.VALOR_VENDA, 14) + fN(r.VALOR_COMISSAO, 14)
-                + fX(r.TIPO_URBANO_RURAL, 1) + fX(r.ENDERECO, 60)
+                + fDoc(r.CPF_CNPJ_COMPRADOR) // Usa função inteligente CPF/CNPJ
+                + fX(r.NOME_COMPRADOR, 60)
+                + fDoc(r.CPF_CNPJ_VENDEDOR)  // Usa função inteligente CPF/CNPJ
+                + fX(r.NOME_VENDEDOR, 60)
+                + fX(r.CONTRATO, 6) 
+                + fN(r.DATA_DDMMAAAA, 8)
+                + fV(r.VALOR_VENDA, 14)      // NOVA FUNÇÃO MONETÁRIA
+                + fV(r.VALOR_COMISSAO, 14)   // NOVA FUNÇÃO MONETÁRIA
+                + fX(r.TIPO_URBANO_RURAL, 1) 
+                + fX(r.ENDERECO, 60)
                 + fN(r.CEP, 8) + fN(codMunL, 4) + "".padEnd(20, " ") + fX(r.UF, 2) + "".padEnd(10, " ") + "\r\n";
         });
 
-        txt += "T9" + "".padEnd(100, " ") + "\r\n";
+        txt += "T9" + "".padEnd(100, " ") + "\r\n"; // Trailer
 
         const blob = new Blob([txt], {type: 'text/plain'});
         const link = document.createElement('a');
@@ -161,15 +201,13 @@ function gerarTxtFinal() {
 function baixarModelo() {
     const headers = [["SEQUENCIAL", "CPF_CNPJ_COMPRADOR", "NOME_COMPRADOR", "CPF_CNPJ_VENDEDOR", "NOME_VENDEDOR", "CONTRATO", "DATA_DDMMAAAA", "VALOR_VENDA", "VALOR_COMISSAO", "TIPO_URBANO_RURAL", "ENDERECO", "CEP", "MUNICIPIO_NOME", "UF"]];
     const ws = XLSX.utils.aoa_to_sheet(headers);
-    
     const range = XLSX.utils.decode_range(ws['!ref']);
     for (let R = range.s.r; R <= range.e.r; ++R) {
-        const colB = XLSX.utils.encode_cell({r: R, c: 1});
+        const colB = XLSX.utils.encode_cell({r: R, c: 1}); 
         const colD = XLSX.utils.encode_cell({r: R, c: 3});
         if (ws[colB]) ws[colB].z = '@'; 
         if (ws[colD]) ws[colD].z = '@';
     }
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Dados");
     XLSX.writeFile(wb, "Modelo_DIMOB_Vendas.xlsx");
