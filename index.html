@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DIMOB 2025 | Conversor com Histórico</title>
+    <title>DIMOB 2025 | Conversor Oficial</title>
     
     <link rel="manifest" href="manifest.json">
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -15,7 +14,6 @@
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 30px; margin: 0; }
         .container { max-width: 1100px; margin: auto; }
         
-        /* Grid Principal */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px; }
         
         .card { background: var(--card); border: 1px solid #333; padding: 25px; border-radius: 12px; display: flex; flex-direction: column; }
@@ -29,7 +27,7 @@
         .obs { font-size: 12px; color: #aaa; margin-top: 5px; line-height: 1.4; }
         .status-msg { font-size: 11px; color: #aaa; margin-top: 5px; display: none; }
 
-        /* Painel de Histórico */
+        /* Painel Histórico */
         .history-panel { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 20px; margin-top: 20px; display: none; }
         .history-panel.active { display: block; animation: fadeIn 0.5s; }
         
@@ -50,7 +48,7 @@
 <div class="container">
     <header style="text-align: center; margin-bottom: 40px;">
         <h1>DIMOB <span style="color:#fff">SYSTEM</span></h1>
-        <p style="color: var(--orange)">Gerador de Arquivo Magnético - Multi Documento</p>
+        <p style="color: var(--orange)">Gerador de Arquivo Magnético - Layout R04</p>
     </header>
 
     <div class="grid">
@@ -58,7 +56,7 @@
             <h3><i class="fas fa-table"></i> 1. Planilha Inteligente</h3>
             <p class="obs">
                 Baixe o modelo.<br>
-                <b>CPF/CNPJ:</b> A coluna aceita ambos. O sistema detecta e formata automaticamente.
+                <b>IMPORTANTE:</b> As colunas de CPF/CNPJ já estão formatadas como TEXTO para não perder zeros ou virar notação científica.
             </p>
             <button onclick="baixarModelo()" class="btn" style="background: #333; border: 1px solid #444;">BAIXAR MODELO EXCEL</button>
         </div>
@@ -93,25 +91,24 @@
 
         <div class="card">
             <h3><i class="fas fa-file-code"></i> 3. Gerar TXT</h3>
-            <p class="obs">Selecione a planilha. O sistema salvará o histórico abaixo.</p>
+            <p class="obs">Selecione a planilha preenchida.</p>
             <input type="file" id="arquivo_input" accept=".xlsx">
             <button onclick="gerarTxtFinal()" class="btn">CONVERTER E SALVAR</button>
         </div>
     </div>
 
     <div id="painelHistorico" class="history-panel">
-        <h3><i class="fas fa-history"></i> Histórico de Arquivos Gerados (Sessão Atual)</h3>
+        <h3><i class="fas fa-history"></i> Histórico da Sessão</h3>
         <table>
             <thead>
                 <tr>
                     <th>Hora</th>
-                    <th>Empresa Declarante</th>
+                    <th>Empresa</th>
                     <th>CNPJ</th>
                     <th>Arquivos</th>
                 </tr>
             </thead>
-            <tbody id="tabelaHistorico">
-                </tbody>
+            <tbody id="tabelaHistorico"></tbody>
         </table>
     </div>
 
@@ -121,7 +118,7 @@
 
 <script>
 // ============================================================
-// 1. FORMATAÇÃO E HIGIENIZAÇÃO
+// 1. HIGIENIZAÇÃO E FORMATAÇÃO
 // ============================================================
 
 const fX = (v, t) => {
@@ -135,10 +132,7 @@ const fN = (v, t) => {
     return s.padStart(t, "0").substring(0, t);
 };
 
-// --- INTELIGÊNCIA HÍBRIDA (CPF/CNPJ) ---
-// O sistema verifica o tamanho do número limpo:
-// > 11 dígitos: É CNPJ (Preenche 14 posições com zeros à esquerda)
-// <= 11 dígitos: É CPF (Preenche 11 posições com zeros à esquerda + espaços à direita para totalizar 14)
+// Reconhecimento Automático CPF vs CNPJ
 const fDoc = (v) => {
     let s = (v || "").toString().replace(/\D/g, "");
     if (s.length > 11) return s.padStart(14, "0").substring(0, 14); // CNPJ
@@ -156,6 +150,7 @@ const fVal = (v, t) => {
 
 const fData = (v) => {
     if (!v) return "00000000";
+    // Trata data serial do Excel
     if (typeof v === 'number' && v > 20000) {
         const date = new Date(Math.round((v - 25569) * 86400 * 1000));
         const d = String(date.getUTCDate()).padStart(2, '0');
@@ -174,43 +169,59 @@ function normalizarCidade(texto) {
 }
 
 // ============================================================
-// 2. DOWNLOAD DO MODELO
+// 2. DOWNLOAD DO MODELO (CORREÇÃO DE EXIBIÇÃO DE CNPJ)
 // ============================================================
 function baixarModelo() {
     const wb = XLSX.utils.book_new();
 
+    // --- ABA 1: INSTRUÇÕES ---
     const instrucoes = [
-        ["MANUAL RÁPIDO - DIMOB 2025", ""],
-        ["CAMPO", "REGRA DE PREENCHIMENTO"],
-        ["CPF_CNPJ", "Digite números. Se for CPF ou CNPJ, o sistema detecta sozinho."],
-        ["DATA", "DDMMAAAA (Ex: 01022025)."],
-        ["VALOR", "Centavos sem vírgula (Ex: 25000000 = R$ 250.000,00)."],
-        ["TIPO", "'U' (Urbano) ou 'R' (Rural)."],
-        ["UF", "Sigla do Estado (SP, RJ)."],
-        ["MUNICIPIO", "Nome da cidade por extenso."],
+        ["MANUAL RÁPIDO", ""],
+        ["CAMPO", "COMO PREENCHER"],
+        ["CPF_CNPJ", "Digite APENAS NÚMEROS. Ex: 10578345000180"],
+        ["DATA", "DDMMAAAA (Ex: 01022025)"],
+        ["VALOR", "Centavos sem vírgula (Ex: 25000000)"],
+        ["TIPO", "'U' (Urbano) ou 'R' (Rural)"],
         ["", ""],
-        ["AVISO:", "Preencha na aba 'DADOS_DIMOB'."]
+        ["AVISO:", "Vá para a aba DADOS_DIMOB para preencher."]
     ];
     const wsInst = XLSX.utils.aoa_to_sheet(instrucoes);
     wsInst['!cols'] = [{wch: 25}, {wch: 60}];
     XLSX.utils.book_append_sheet(wb, wsInst, "INSTRUCOES");
 
+    // --- ABA 2: DADOS (CONFIGURAÇÃO BLINDADA) ---
     const headers = [["SEQUENCIAL", "CPF_CNPJ_COMPRADOR", "NOME_COMPRADOR", "CPF_CNPJ_VENDEDOR", "NOME_VENDEDOR", "CONTRATO", "DATA_DDMMAAAA", "VALOR_VENDA", "VALOR_COMISSAO", "TIPO_URBANO_RURAL", "ENDERECO", "CEP", "MUNICIPIO_NOME", "UF"]];
     const wsDados = XLSX.utils.aoa_to_sheet(headers);
 
+    // 1. LARGURA DAS COLUNAS (AUMENTADA PARA CNPJ NÃO FICAR ######)
     wsDados['!cols'] = [
-        {wch: 10}, {wch: 25}, {wch: 40}, {wch: 25}, {wch: 40}, 
-        {wch: 12}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 10}, 
-        {wch: 50}, {wch: 12}, {wch: 25}, {wch: 5}
+        {wch: 12}, // Seq
+        {wch: 30}, // CPF_CNPJ COMPRADOR (Largo para caber 14 digitos)
+        {wch: 40}, // Nome
+        {wch: 30}, // CPF_CNPJ VENDEDOR (Largo para caber 14 digitos)
+        {wch: 40}, // Nome
+        {wch: 15}, // Contrato
+        {wch: 15}, // Data
+        {wch: 18}, // Valor
+        {wch: 18}, // Comissao
+        {wch: 10}, // Tipo
+        {wch: 50}, // Endereco
+        {wch: 15}, // CEP
+        {wch: 25}, // Municipio
+        {wch: 5}   // UF
     ];
 
-    const range = {s: {c: 0, r: 0}, e: {c: 13, r: 1000}}; 
+    // 2. FORÇAR FORMATO DE TEXTO EM TODAS AS LINHAS
+    // Isso garante que 10578345000180 fique como texto e não vire 1,05E+13
+    const range = {s: {c: 0, r: 0}, e: {c: 13, r: 5000}}; 
     if(!wsDados['!ref']) wsDados['!ref'] = XLSX.utils.encode_range(range);
 
     for (let R = range.s.r; R <= range.e.r; ++R) {
         for (let C = range.s.c; C <= range.e.c; ++C) {
             let ref = XLSX.utils.encode_cell({c: C, r: R});
-            if (!wsDados[ref]) wsDados[ref] = { t: 's', v: '' };
+            if (!wsDados[ref]) wsDados[ref] = { t: 's', v: '' }; // Cria célula vazia se não existir
+            
+            // Força tipo String e formato Texto (@)
             wsDados[ref].t = 's'; 
             wsDados[ref].z = '@'; 
         }
@@ -221,7 +232,7 @@ function baixarModelo() {
 }
 
 // ============================================================
-// 3. CONSULTA CNPJ
+// 3. CONSULTA AUTOMÁTICA
 // ============================================================
 async function consultarEmpresa(cnpj) {
     const limpo = cnpj.replace(/\D/g, "");
@@ -241,43 +252,36 @@ async function consultarEmpresa(cnpj) {
             const cod = MUNICIPIOS_RFB[normalizarCidade(e.cidade.nome)] || "";
             document.getElementById('mun_decl_codigo').value = cod;
         }
-    } catch (e) { console.log("Erro API"); } 
+    } catch (e) {} 
     finally { document.getElementById('loading').style.display = 'none'; }
 }
 
 // ============================================================
-// 4. GERAÇÃO E HISTÓRICO
+// 4. CONVERSÃO E HISTÓRICO
 // ============================================================
 
-// Função auxiliar para adicionar ao histórico
 function adicionarAoHistorico(empresa, cnpj, blobTxt, fileExcel) {
     const tbody = document.getElementById('tabelaHistorico');
     const painel = document.getElementById('painelHistorico');
-    
     const now = new Date();
     const hora = now.toLocaleTimeString([], {hour: '2digit', minute:'2digit'});
-    
-    // URL para download do TXT gerado
     const urlTxt = URL.createObjectURL(blobTxt);
-    // URL para download do Excel original (cópia)
     const urlExcel = URL.createObjectURL(fileExcel);
     
     const tr = document.createElement('tr');
     tr.innerHTML = `
         <td>${hora}</td>
-        <td>${empresa}</td>
+        <td>${empresa.substring(0, 20)}...</td>
         <td>${fN(cnpj, 14)}</td>
         <td>
             <a href="${urlExcel}" download="${fileExcel.name}" class="btn-sm btn-green">
-                <i class="fas fa-file-excel"></i> Excel Orig.
+                <i class="fas fa-file-excel"></i> XLSX
             </a>
             <a href="${urlTxt}" download="DIMOB_${fN(cnpj, 14)}.txt" class="btn-sm btn-blue">
-                <i class="fas fa-file-alt"></i> Baixar TXT
+                <i class="fas fa-file-alt"></i> TXT
             </a>
         </td>
     `;
-    
-    // Adiciona no topo da lista
     tbody.insertBefore(tr, tbody.firstChild);
     painel.classList.add('active');
 }
@@ -310,18 +314,16 @@ function gerarTxtFinal() {
 
         // R04
         json.forEach((r, i) => {
-            if (!r.CPF_CNPJ_COMPRADOR && !r.NOME_COMPRADOR) return;
+            if (!r.CPF_CNPJ_COMPRADOR && !r.NOME_COMPRADOR) return; // Pula linhas vazias
 
             const codMunL = MUNICIPIOS_RFB[normalizarCidade(r.MUNICIPIO_NOME)] || "0000";
             
             let linha = "R04";
             linha += fN(cnpj, 14) + "2025" + fN(i+1, 7);
             
-            // AQUI ESTÁ O RECONHECIMENTO AUTOMÁTICO CPF/CNPJ
+            // Inteligência para manter o número correto no TXT
             linha += fDoc(r.CPF_CNPJ_COMPRADOR); 
             linha += fX(r.NOME_COMPRADOR, 60);
-            
-            // AQUI TAMBÉM
             linha += fDoc(r.CPF_CNPJ_VENDEDOR);
             linha += fX(r.NOME_VENDEDOR, 60);
             
@@ -341,16 +343,12 @@ function gerarTxtFinal() {
 
         txt += "T9" + "".padEnd(100, " ") + "\r\n";
 
-        // GERA BLOB PARA O ARQUIVO TXT
         const blobTxt = new Blob([txt], {type: 'text/plain'});
-        
-        // DISPARA DOWNLOAD AUTOMÁTICO
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blobTxt);
         link.download = `DIMOB_2025_${fN(cnpj, 14)}.txt`;
         link.click();
 
-        // SALVA NO HISTÓRICO VISUAL (Passando o Blob do TXT e o Arquivo Excel original)
         adicionarAoHistorico(nome, cnpj, blobTxt, file);
     };
     reader.readAsArrayBuffer(file);
