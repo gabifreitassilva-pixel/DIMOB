@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DIMOB 2025 | Conversor Profissional</title>
+    <title>DIMOB 2025 | Conversor Oficial</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -32,11 +32,11 @@
         <div class="card">
             <h3><i class="fas fa-table"></i> 1. Planilha Inteligente</h3>
             <p class="obs">
-                O arquivo baixado contém duas abas:<br>
-                1. <b>INSTRUÇÕES:</b> Regras de preenchimento.<br>
-                2. <b>DADOS:</b> Local para digitar as vendas.
+                Baixe o modelo atualizado.<br>
+                Aba 1: <b>INSTRUÇÕES</b> (CEP, Endereço, CNPJ).<br>
+                Aba 2: <b>DADOS_DIMOB</b> (Colunas travadas como Texto).
             </p>
-            <button onclick="baixarModelo()" class="btn" style="background: #333; border: 1px solid #444;">BAIXAR MODELO COM INSTRUÇÕES</button>
+            <button onclick="baixarModelo()" class="btn" style="background: #333; border: 1px solid #444;">BAIXAR MODELO COM MANUAL</button>
         </div>
 
         <div class="card">
@@ -82,20 +82,17 @@
 // LÓGICA DE FORMATAÇÃO (RIGOROSA)
 // ============================================================
 
-// Texto: Maiúsculo, Sem acentos, Tamanho exato
 const fX = (v, t) => {
     let s = (v || "").toString().toUpperCase();
     s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
     return s.padEnd(t, " ").substring(0, t);
 };
 
-// Números: Apenas dígitos, zeros à esquerda
 const fN = (v, t) => {
     let s = (v || "0").toString().replace(/\D/g, ""); 
     return s.padStart(t, "0").substring(0, t);
 };
 
-// Documento: CPF (11 + espaços) ou CNPJ (14)
 const fDoc = (v) => {
     let s = (v || "").toString().replace(/\D/g, "");
     if (s.length > 11) return s.padStart(14, "0").substring(0, 14); // CNPJ
@@ -107,59 +104,68 @@ function normalizarCidade(texto) {
 }
 
 // ============================================================
-// FUNÇÃO NOVA: BAIXAR MODELO COM ABA DE INSTRUÇÕES
+// FUNÇÃO NOVA: BAIXAR MODELO COM INSTRUÇÕES DE CEP E ENDEREÇO
 // ============================================================
 function baixarModelo() {
     const wb = XLSX.utils.book_new();
 
     // --- ABA 1: INSTRUÇÕES ---
     const instrucoesData = [
-        ["MANUAL DE PREENCHIMENTO RÁPIDO - DIMOB 2025", ""],
+        ["MANUAL DE PREENCHIMENTO - DIMOB 2025", ""],
         ["", ""],
-        ["CAMPO", "COMO PREENCHER (EXEMPLOS)"],
-        ["CPF_CNPJ", "Digite apenas números. Não use pontos ou traços. (Ex: 12345678900)"],
+        ["CAMPO", "INSTRUÇÃO DE PREENCHIMENTO"],
+        ["CPF_CNPJ", "Digite APENAS NÚMEROS. Não use pontos ou traços. (Ex: 12345678000199)"],
         ["DATA", "Formato DDMMAAAA sem barras. Ex: Para 01/02/2025 digite 01022025"],
         ["VALOR_VENDA", "Valor total em CENTAVOS sem vírgula. Ex: Para R$ 250.000,00 digite 25000000"],
         ["VALOR_COMISSAO", "Mesma regra da venda. Digite os centavos sem vírgula."],
+        ["ENDERECO", "Rua, Número, Compl, Bairro. Evite acentos. Max 60 caracteres."],
+        ["CEP", "Apenas números, 8 dígitos. Ex: 06000100 (Sem traço)."],
         ["TIPO", "Digite 'U' para Urbano ou 'R' para Rural."],
         ["UF", "Sigla do Estado com 2 letras (Ex: SP, RJ, MG)."],
-        ["MUNICIPIO", "Nome da cidade por extenso (Ex: ARACARIGUAMA). O sistema converte para código."],
+        ["MUNICIPIO", "Nome da cidade por extenso (Ex: ARACARIGUAMA)."],
         ["CONTRATO", "Número do contrato com até 6 dígitos."],
         ["", ""],
-        ["IMPORTANTE:", "Não apague as colunas. Preencha na aba 'DADOS_DIMOB'."]
+        ["ATENÇÃO:", "Preencha seus dados na aba 'DADOS_DIMOB' abaixo."]
     ];
     
     const wsInstrucoes = XLSX.utils.aoa_to_sheet(instrucoesData);
-    
-    // Formatação visual básica da aba instruções (Largura das colunas)
-    wsInstrucoes['!cols'] = [{wch: 20}, {wch: 80}];
+    wsInstrucoes['!cols'] = [{wch: 25}, {wch: 80}]; // Largura das colunas de instrução
     XLSX.utils.book_append_sheet(wb, wsInstrucoes, "INSTRUCOES");
 
     // --- ABA 2: DADOS PARA PREENCHIMENTO ---
     const headers = [["SEQUENCIAL", "CPF_CNPJ_COMPRADOR", "NOME_COMPRADOR", "CPF_CNPJ_VENDEDOR", "NOME_VENDEDOR", "CONTRATO", "DATA_DDMMAAAA", "VALOR_VENDA", "VALOR_COMISSAO", "TIPO_URBANO_RURAL", "ENDERECO", "CEP", "MUNICIPIO_NOME", "UF"]];
     const wsDados = XLSX.utils.aoa_to_sheet(headers);
     
-    // Travar formato como Texto para não estragar CNPJ/Data
+    // --- FORMATAR COLUNAS COMO TEXTO ---
     const range = XLSX.utils.decode_range(wsDados['!ref']);
     for(let R = range.s.r; R <= range.e.r; ++R) {
         for(let C = range.s.c; C <= range.e.c; ++C) {
             let ref = XLSX.utils.encode_cell({c:C, r:R});
             if(!wsDados[ref]) wsDados[ref] = {t:'s', v:''};
-            wsDados[ref].z = '@';
+            wsDados[ref].z = '@'; // Formato Texto
         }
     }
     
-    // Ajustar largura das colunas da aba de dados
+    // --- LARGURA DAS COLUNAS (AJUSTE VISUAL PARA CNPJ NÃO FICAR ESCONDIDO) ---
     wsDados['!cols'] = [
-        {wch: 10}, {wch: 20}, {wch: 40}, {wch: 20}, {wch: 40}, 
-        {wch: 10}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 10}, 
-        {wch: 50}, {wch: 10}, {wch: 20}, {wch: 5}
+        {wch: 10}, // Seq
+        {wch: 25}, // CPF_CNPJ Comp (Largo para caber CNPJ)
+        {wch: 40}, // Nome
+        {wch: 25}, // CPF_CNPJ Vend (Largo para caber CNPJ)
+        {wch: 40}, // Nome
+        {wch: 10}, // Contrato
+        {wch: 15}, // Data
+        {wch: 15}, // Valor
+        {wch: 15}, // Comissao
+        {wch: 10}, // Tipo
+        {wch: 50}, // Endereco (Largo)
+        {wch: 12}, // CEP
+        {wch: 20}, // Municipio
+        {wch: 5}   // UF
     ];
 
     XLSX.utils.book_append_sheet(wb, wsDados, "DADOS_DIMOB");
-
-    // Baixar arquivo
-    XLSX.writeFile(wb, "Modelo_DIMOB_Com_Instrucoes.xlsx");
+    XLSX.writeFile(wb, "Modelo_DIMOB_Instrucoes.xlsx");
 }
 
 // ============================================================
@@ -201,12 +207,11 @@ function gerarTxtFinal() {
         const data = new Uint8Array(e.target.result);
         const wb = XLSX.read(data, {type: 'array', raw: false});
         
-        // Pega a aba "DADOS_DIMOB" (procura pelo nome ou pega a segunda aba se não achar)
+        // Pega a aba "DADOS_DIMOB"
         let sheet = wb.Sheets["DADOS_DIMOB"];
-        if (!sheet) sheet = wb.Sheets[wb.SheetNames[1]] || wb.Sheets[wb.SheetNames[0]]; // Fallback
+        if (!sheet) sheet = wb.Sheets[wb.SheetNames[1]] || wb.Sheets[wb.SheetNames[0]];
 
         const json = XLSX.utils.sheet_to_json(sheet);
-
         let txt = "DIMOB" + "".padEnd(369, " ") + "\r\n"; // Header
 
         // R01
@@ -215,7 +220,7 @@ function gerarTxtFinal() {
 
         // R04
         json.forEach((r, i) => {
-            if (!r.CPF_CNPJ_COMPRADOR) return; // Pula linhas vazias
+            if (!r.CPF_CNPJ_COMPRADOR) return; 
             const codMunL = MUNICIPIOS_RFB[normalizarCidade(r.MUNICIPIO_NOME)] || "0000";
             
             let linha = "R04";
@@ -232,7 +237,7 @@ function gerarTxtFinal() {
             linha += fX(r.ENDERECO, 60);
             linha += fN(r.CEP, 8);
             linha += fN(codMunL, 4);
-            linha += fX(r.UF, 2); // UF na posição correta
+            linha += fX(r.UF, 2); 
             linha += "".padEnd(10, " ");
             
             txt += linha + "\r\n";
