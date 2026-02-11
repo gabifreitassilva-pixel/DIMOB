@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dimob-pro-v5';
+const CACHE_NAME = 'dimob-pro-v6';
 
 // Arquivos que serão salvos no computador do usuário
 const urlsToCache = [
