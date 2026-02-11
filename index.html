@@ -17,7 +17,6 @@
         input { width: 100%; padding: 12px; margin-bottom: 15px; background: #222; border: 1px solid #444; color: #fff; border-radius: 8px; box-sizing: border-box; }
         .btn { background: var(--orange); color: #fff; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
         .status-msg { font-size: 11px; color: #888; margin-top: -10px; margin-bottom: 10px; display: none; }
-        .instr { font-size: 12px; color: #aaa; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -31,7 +30,7 @@
     <div class="grid">
         <div class="card">
             <h3><i class="fas fa-file-excel"></i> 1. Preparação</h3>
-            <p class="instr">Baixe o modelo e preencha os dados das vendas.</p>
+            <p style="color:#888; font-size:13px; margin-bottom:15px">Baixe a planilha base e preencha os dados das vendas.</p>
             <button onclick="baixarModelo()" class="btn" style="background: #333;">Baixar Modelo XLSX</button>
         </div>
 
@@ -44,8 +43,8 @@
             <label>Nome Empresarial (Razão Social)</label>
             <input type="text" id="nome_decl">
             
-            <label>Endereço Completo (Logradouro, Nº, Compl, Bairro)</label>
-            <input type="text" id="end_decl" placeholder="Ex: RUA SANTA CRUZ, 170 SALA SALAO ESQ - CENTRO">
+            <label>Endereço Completo (Obrigatório para R01)</label>
+            <input type="text" id="end_decl" placeholder="Será preenchido automaticamente...">
             
             <label>Município (Nome)</label>
             <input type="text" id="mun_decl_nome" readonly>
@@ -57,7 +56,7 @@
 
         <div class="card">
             <h3><i class="fas fa-sync"></i> 3. Gerar TXT</h3>
-            <p class="instr">Selecione o arquivo preenchido para converter.</p>
+            <p style="color:#888; font-size:13px; margin-bottom:15px">Selecione o arquivo preenchido para converter.</p>
             <input type="file" id="arquivo_input" accept=".xlsx">
             <button onclick="gerarTxtFinal()" class="btn">CONVERTER E BAIXAR TXT</button>
         </div>
@@ -75,7 +74,7 @@ function normalizarCidade(texto) {
     return texto ? texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim() : "";
 }
 
-// Consulta CNPJ e preenche os campos do Registro R01
+// Consulta CNPJ e preenche os campos, INCLUINDO O ENDEREÇO
 async function consultarEmpresa(cnpj) {
     const limpo = cnpj.replace(/\D/g, "");
     if (limpo.length !== 14) return;
@@ -89,7 +88,7 @@ async function consultarEmpresa(cnpj) {
             document.getElementById('nome_decl').value = data.razao_social;
             
             const est = data.estabelecimento;
-            // Montagem do endereço para o Registro R01
+            // AQUI ESTÁ A MÁGICA: Monta o endereço e joga no campo VISÍVEL "end_decl"
             const enderecoMontado = `${est.tipo_logradouro} ${est.logradouro}, ${est.numero} ${est.complemento || ""} - ${est.bairro}`.trim();
             document.getElementById('end_decl').value = enderecoMontado;
             
@@ -111,15 +110,16 @@ async function consultarEmpresa(cnpj) {
 }
 
 function gerarTxtFinal() {
+    // AGORA ELE LÊ O ENDEREÇO QUE ESTÁ NA TELA
     const cnpj = document.getElementById('cnpj_decl').value;
     const nome = document.getElementById('nome_decl').value;
-    const endereco = document.getElementById('end_decl').value;
+    const endereco = document.getElementById('end_decl').value; 
     const cpfR = document.getElementById('cpf_resp').value;
     const munCod = document.getElementById('mun_decl_codigo').value;
     const file = document.getElementById('arquivo_input').files[0];
 
     if (!file || !cnpj || !endereco || !cpfR) {
-        return alert("Por favor, preencha todos os campos do Declarante e selecione o arquivo.");
+        return alert("Por favor, preencha todos os campos do Declarante (incluindo Endereço e CPF) e selecione o arquivo.");
     }
 
     const reader = new FileReader();
@@ -128,15 +128,14 @@ function gerarTxtFinal() {
         const wb = XLSX.read(data, {type: 'array', raw: true});
         const planilha = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-        // Registro Header
         let txt = "DIMOB" + "".padEnd(369, " ") + "\r\n";
 
-        // Registro R01 - Dados do Declarante (Ajustado para ocupar as posições corretas)
-        // Nome(60) + CPFResp(11) + Endereço(120) + UF(2) + CodMun(4)
+        // REGISTRO R01 CORRIGIDO:
+        // Agora ele insere a variável 'endereco' que pegamos da tela na posição correta (após o CPF)
         txt += "R01" + fN(cnpj, 14) + "2025" + "0" + "".padEnd(10, "0") + "0" + "00000000" + "00" 
             + fX(nome, 60) + fN(cpfR, 11) + fX(endereco, 120) + "SP" + fN(munCod, 4) + "".padEnd(30, " ") + "\r\n";
 
-        // Registro R04 - Vendas
+        // R04 - Vendas
         planilha.forEach((r, i) => {
             const codMunL = MUNICIPIOS_RFB[normalizarCidade(r.MUNICIPIO_NOME)] || "0000";
             txt += "R04" + fN(cnpj, 14) + "2025" + fN(i+1, 7)
@@ -148,14 +147,12 @@ function gerarTxtFinal() {
                 + fN(r.CEP, 8) + fN(codMunL, 4) + "".padEnd(20, " ") + fX(r.UF, 2) + "".padEnd(10, " ") + "\r\n";
         });
 
-        // Registro Trailer
         txt += "T9" + "".padEnd(100, " ") + "\r\n";
 
-        // Download
         const blob = new Blob([txt], {type: 'text/plain'});
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `DIMOB_ENTREGA_2025_${fN(cnpj, 14)}.txt`;
+        link.download = `DIMOB_2025_${fN(cnpj, 14)}.txt`;
         link.click();
     };
     reader.readAsArrayBuffer(file);
@@ -164,6 +161,15 @@ function gerarTxtFinal() {
 function baixarModelo() {
     const headers = [["SEQUENCIAL", "CPF_CNPJ_COMPRADOR", "NOME_COMPRADOR", "CPF_CNPJ_VENDEDOR", "NOME_VENDEDOR", "CONTRATO", "DATA_DDMMAAAA", "VALOR_VENDA", "VALOR_COMISSAO", "TIPO_URBANO_RURAL", "ENDERECO", "CEP", "MUNICIPIO_NOME", "UF"]];
     const ws = XLSX.utils.aoa_to_sheet(headers);
+    
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+        const colB = XLSX.utils.encode_cell({r: R, c: 1});
+        const colD = XLSX.utils.encode_cell({r: R, c: 3});
+        if (ws[colB]) ws[colB].z = '@'; 
+        if (ws[colD]) ws[colD].z = '@';
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Dados");
     XLSX.writeFile(wb, "Modelo_DIMOB_Vendas.xlsx");
